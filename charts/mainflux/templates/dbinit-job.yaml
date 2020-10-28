@@ -1,0 +1,38 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Release.Name }}-initdb-job
+  annotations:
+    # This is what defines this resource as a hook. Without this line, the
+    # job is considered part of the release.
+    "helm.sh/hook": pre-install
+spec:
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}
+        component: initdb-job
+    spec:
+      restartPolicy: Never
+      containers:
+      - env:
+            - name: ADMIN_USERNAME
+              value: {{ .Values.databasereq.adminUsername }}
+            - name: ADMIN_PASSWORD
+              value: {{ .Values.databasereq.adminPassw }}
+            - name: POSTGRES_ADDR
+              value: "{{ .Values.databasereq.postgresqlAddr }}"
+            - name: POSTGRES_PORT
+              value: "{{ .Values.databasereq.postgresqlPort }}"
+            - name: USERNAME
+              value: {{ .Values.databasereq.postgresqlUsername }}
+            - name: PASSWORD
+              value: {{ .Values.databasereq.postgresqlPassword }}
+	{{- range $key, $val := .Values.databasereq.databases }}
+            - name: BASE-{{ $key | upper }}
+              value: {{ $val | quote }}
+        {{- end }}
+
+        name: {{ .Release.Name }}-initdb-job
+        image: "{{ .Values.databasereq.repo }}:{{ .Values.databasereq.repoTag }}"
+

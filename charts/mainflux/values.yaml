@@ -1,0 +1,271 @@
+# Copyright (c) Mainflux
+# SPDX-License-Identifier: Apache-2.0
+
+defaults:
+  logLevel: "info"
+  image:
+    pullPolicy: "IfNotPresent"
+    repository: "mainflux"
+    tag: "0.11.0"
+  # Replicas of MQTT adapter, NATS, Things, Envoy and Authn
+  replicaCount: 1
+  natsPort: 4222
+  jaegerPort: 6831
+  url: 10.5.51.14
+
+ingress:
+  enabled: true
+  annotations: {}
+  labels: {}
+  # Uncomment this block for TLS support in public ingress
+  hostname: "mf-ui.out"
+  tls:
+    hostname: "mf-ui.out"
+    secret: "mainflux-server"
+
+nginxInternal:
+  mtls:
+    # By default mTLS is disabled. If you use mTLS, comment this block.
+    #tls: ""
+    #intermediateCrt: ""
+    # Uncomment this block for TLS and mTLS support.
+    # Use sh script from /secrets/secrets.sh to create config maps with your certs
+    tls: "mainflux-server"
+    intermediateCrt: "ca"
+
+adapter_http:
+  image: {}
+  httpPort: 8185
+
+adapter_coap:
+  image: {}
+  udpPort: 5683
+
+adapter_opcua:
+  enabled: false
+  image: {}
+  httpPort: 8188
+  policy: ""
+  mode: ""
+  certFile: ""
+  keyFile: ""
+  eventConsumer: "opcua"
+  redisRouteMapPort: 6379
+
+adapter_lora:
+  enabled: false
+  image: {}
+  httpPort: 8187
+  messageUrl: "tcp://lora.mqtt.mainflux.io:1883"
+  redisRouteMapPort: 6379
+
+mqtt:
+  enabled: true
+  securityContext:
+    runAsUser: 10000
+    runAsGroup: 10000
+    fsGroup: 10000
+  proxy:
+    image:
+      repository: "mainflux/mqtt"
+      tag: "0.11.0"
+      pullPolicy: "IfNotPresent"
+    mqttPort: 1884
+    wsPort: 8081
+    logLevel: "debug"
+  broker:
+    image:
+      repository: "mainflux/vernemq"
+      tag: "0.11.0"
+    mqttPort: 1883
+    mqttEnvoyPort: 30653
+    wsPort: 8080
+    logLevel: "info"
+    persistentVolume:
+      size: 5Gi
+  redisESPort: 6379
+  redisCachePort: 6379
+
+users:
+  image: {}
+  dbPort: 5432
+  httpPort: 8180
+
+things:
+  image: {}
+  dbPort: 5432
+  httpPort: 8182
+  authGrpcPort: 8183
+  authHttpPort: 8989
+  redisESPort: 6379
+  redisCachePort: 6379
+
+authn:
+  image: {}
+  dbPort: 5432
+  grpcPort: 8181
+  httpPort: 8189
+
+bootstrap:
+  enabled: true
+  image:
+    tag: latest
+  dbPort: 5432
+  httpPort: 8202
+  containerPort: 8202
+  redisESPort: 6379
+
+ui:
+  image: {}
+  port: 3000
+
+influxdb:
+  enabled: true
+  dbPort: 8086
+  writer:
+    image: {}
+    httpPort: 8900
+  reader:
+    image: {}
+    httpPort: 8905
+  initScripts:
+    enabled: true
+    scripts:
+      init.iql: |+
+        CREATE DATABASE "mainflux"
+
+nats:
+  auth:
+    enabled: false
+  clusterAuth:
+    enabled: false
+  maxPayload: 268435456
+  replicaCount: 1
+
+databasereq:
+  adminPassw: tea
+  adminUsername: postgres
+  postgresqlUsername: mainflux12
+  postgresqlPassword: mainflux
+  postgresqlAddr: patroni.patroni.svc.cluster.local
+  postgresqlPort: 5432
+  repo: "mrquaters/easy-initdb"
+  repoTag: "v0.3.3"
+  databases:
+     users: users
+     things: things
+     authn: authn
+     bootstrap: bootstrap
+
+postgresql-users:
+  name: postgresql-users
+  postgresqlUsername: mainflux
+  postgresqlPassword: mainflux
+  postgresqlDatabase: users
+  resources:
+    requests:
+      cpu: 25m
+
+postgresql-things:
+  name: postgresql-things
+  postgresqlUsername: mainflux
+  postgresqlPassword: mainflux
+  postgresqlDatabase: things
+  resources:
+    requests:
+      cpu: 25m
+
+postgresql-authn:
+  name: postgresql-authn
+  postgresqlUsername: mainflux
+  postgresqlPassword: mainflux
+  postgresqlDatabase: authn
+  resources:
+    requests:
+      cpu: 25m
+
+postgresql-bootstrap:
+  name: postgresql-bootstrap
+  postgresqlUsername: mainflux
+  postgresqlPassword: mainflux
+  postgresqlDatabase: bootstrap
+  resources:
+    requests:
+      cpu: 25m
+
+redis-streams:
+  cluster:
+    enabled: false
+  usePassword: false
+
+redis-mqtt:
+  cluster:
+    enabled: false
+  usePassword: false
+
+redis-auth:
+  cluster:
+    enabled: false
+  usePassword: false
+  master:
+    persistence:
+      enabled: false
+
+redis-opcua:
+  cluster:
+    enabled: false
+  usePassword: false
+  master:
+    persistence:
+      enabled: false
+
+redis-lora:
+  cluster:
+    enabled: false
+  usePassword: false
+  master:
+    persistence:
+      enabled: false
+
+jaeger-operator:
+  jaeger:
+    create: true
+  rbac:
+    pspEnabled: true
+    clusterRole: true
+
+twins:
+  enabled: false
+  image: {}
+  dbPort: 27017
+  httpPort: 9021
+  channelId: ""
+  redisCachePort: 6379
+
+twins-db:
+  usePassword: false
+
+envoy:
+  image:
+    pullPolicy: "IfNotPresent"
+    repository: "envoyproxy"
+    tag: "v1.13.0"
+
+provision:
+  enabled: true
+  user: test@email.com
+  passwd: 12345678
+  configFile: /config.toml
+  image:
+    repository: "mainflux"
+    tag: "latest"
+  httpPort: 8190
+  containerPort: 8091
+
+easyprovision:
+  enabled: false
+  image:
+    repository: "mrquaters/mainflux-easyprovision"
+    tag: "v1.0"
+  httpPort: 8093
+  containerPort: 8093

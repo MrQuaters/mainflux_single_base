@@ -1,0 +1,19 @@
+# Copyright (c) Mainflux
+# SPDX-License-Identifier: Apache-2.0
+
+{{- if .Values.provision.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-provision
+spec:
+  selector:
+    app: {{ .Release.Name }}
+    component: provision
+  ports:
+    - port: {{ .Values.provision.httpPort }}
+      targetPort: {{ .Values.provision.containerPort }}
+      protocol: TCP
+      name: {{ .Release.Name }}-provision-{{ .Values.provision.httpPort }}
+  type: ClusterIP
+{{- end }}

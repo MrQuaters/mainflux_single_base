@@ -1,0 +1,39 @@
+{{- if .Values.easyprovision.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-easyprovision
+spec:
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}
+      component: easyprovision
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}
+        component: easyprovision
+    spec:
+      containers:
+        - env:
+            - name: MF_PROVISION_LOG_LEVEL
+              value: {{ .Values.defaults.logLevel }}
+            - name: MF_PROVISION_HTTP_PORT
+              value: "{{ .Values.easyprovision.containerPort }}"
+            - name: MF_PROVISION_THINGS_LOCATION
+              value: http://{{ .Release.Name }}-users:{{ .Values.users.httpPort }}
+            - name: MF_PROVISION_BS_SVC_URL
+              value: http://{{ .Release.Name }}-bootstrap:{{ .Values.bootstrap.httpPort }}/things
+            - name: MF_PROVISION_PRV_URL
+              value: http://{{ .Release.Name }}-provision:{{ .Values.provision.httpPort }}
+          image: "{{ .Values.easyprovision.image.repository }}:{{ .Values.easyprovision.image.tag }}"
+          imagePullPolicy: {{ default .Values.defaults.image.pullPolicy .Values.easyprovision.pullPolicy }}
+          name: {{ .Release.Name }}-easyprovision
+          ports:
+            - containerPort: {{ .Values.easyprovision.containerPort}}
+              protocol: TCP
+          stdin: true
+          tty: true
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+{{- end }}

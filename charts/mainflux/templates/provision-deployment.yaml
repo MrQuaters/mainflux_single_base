@@ -1,0 +1,142 @@
+# Copyright (c) Mainflux
+# SPDX-License-Identifier: Apache-2.0
+
+{{- if .Values.provision.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-provision-config
+data:
+  config.toml: |
+    [bootstrap]
+      [bootstrap.content]
+        [bootstrap.content.agent.edgex]
+          url = "http://localhost:48090/api/v1/"
+
+        [bootstrap.content.agent.log]
+          level = "info"
+    
+        [bootstrap.content.agent.mqtt]
+          mtls = false
+          qos = 0
+          retain = false
+          skip_tls_ver = true
+          url = "tcp://{{ .Values.defaults.url }}:{{ .Values.mqtt.broker.mqttEnvoyPort }}"
+    
+        [bootstrap.content.agent.server]
+          nats_url = "localhost:4222"
+          port = "9000"
+    
+        [bootstrap.content.agent.heartbeat]
+          interval = "30s"
+    
+        [bootstrap.content.agent.terminal]
+          session_timeout = "30s"
+    
+    
+        [bootstrap.content.export.exp]
+          log_level = "debug"
+          nats = "nats://localhost:4222"
+          port = "8172"
+          cache_url = "localhost:6379"
+          cache_pass = ""
+          cache_db = "0"
+    
+        [bootstrap.content.export.mqtt]
+          ca_path = "ca.crt"
+          cert_path = "thing.crt"
+          channel = ""
+          host = "tcp://{{ .Values.defaults.url }}:{{ .Values.mqtt.broker.mqttEnvoyPort }}"
+          mtls = false
+          password = ""
+          priv_key_path = "thing.key"
+          qos = 0
+          retain = false
+          skip_tls_ver = false
+          username = ""
+    
+        [[bootstrap.content.export.routes]]
+          mqtt_topic = ""
+          nats_topic = ">"
+          subtopic = ""
+          type = "plain"
+          workers = 10
+    
+    [[things]]
+      name = "thing"
+    
+      [things.metadata]
+        external_id = "xxxxxx"
+    
+    [[channels]]
+      name = "control-channel"
+    
+      [channels.metadata]
+        type = "control"
+    
+    [[channels]]
+      name = "data-channel"
+    
+      [channels.metadata]
+        type = "data"
+
+    [[channels]]
+      name = "export-channel"
+    
+      [channels.metadata]
+        type = "export"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-provision
+spec:
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}
+      component: provision
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}
+        component: provision
+    spec:
+      containers:
+        - env:
+            - name: MF_PROVISION_USER
+              value: {{ .Values.provision.user }}
+            - name: MF_PROVISION_PASS
+              value: "{{ .Values.provision.passwd }}"
+            - name: MF_PROVISION_CONFIG_FILE
+              value: {{ .Values.provision.configFile }}
+            - name: MF_PROVISION_MQTT_URL
+              value: http://{{ .Release.Name }}-adapter-mqtt:1884
+            - name: MF_PROVISION_USERS_LOCATION
+              value: http://{{ .Release.Name }}-users:{{ .Values.users.httpPort }}
+            - name: MF_PROVISION_THINGS_LOCATION
+              value: http://{{ .Release.Name }}-things:{{ .Values.things.httpPort }}
+            - name: MF_PROVISION_LOG_LEVEL
+              value: debug
+            - name: MF_PROVISION_BS_SVC_URL
+              value: http://{{ .Release.Name }}-bootstrap:{{ .Values.bootstrap.httpPort }}/things
+            - name: MF_PROVISION_BS_SVC_WHITELIST_URL
+              value: http://{{ .Release.Name }}-bootstrap:{{ .Values.bootstrap.httpPort }}/things/state
+          image: "{{ default .Values.defaults.image.repository .Values.provision.image.repository }}/provision:{{ default .Values.defaults.image.tag .Values.provision.image.tag }}"
+          imagePullPolicy: {{ default .Values.defaults.image.pullPolicy .Values.provision.image.pullPolicy }}
+          name: {{ .Release.Name }}-provision
+          ports:
+            - containerPort: {{ .Values.provision.httpPort }}
+              protocol: TCP
+          volumeMounts:
+            - mountPath: /config.toml
+              name: provision-config
+              subPath: config.toml
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      volumes:
+        - configMap:
+            defaultMode: 256
+            name: {{ .Release.Name }}-provision-config
+            optional: false
+          name: provision-config
+{{- end }}

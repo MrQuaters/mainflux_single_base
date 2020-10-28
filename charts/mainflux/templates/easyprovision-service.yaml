@@ -1,0 +1,16 @@
+{{- if .Values.easyprovision.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-easyprovision
+spec:
+  selector:
+    app: {{ .Release.Name }}
+    component: easyprovision
+  ports:
+    - port: {{ .Values.easyprovision.httpPort }}
+      targetPort: {{ .Values.easyprovision.containerPort }}
+      protocol: TCP
+      name: {{ .Release.Name }}-easyprovision-{{ .Values.easyprovision.httpPort }}
+  type: ClusterIP
+{{- end }}
