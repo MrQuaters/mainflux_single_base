@@ -28,7 +28,7 @@ spec:
               value: {{ .Values.databasereq.postgresqlUsername }}
             - name: PASSWORD
               value: {{ .Values.databasereq.postgresqlPassword }}
-	{{- range $key, $val := .Values.databasereq.databases }}
+        {{- range $key, $val := .Values.databasereq.databases }}
             - name: BASE-{{ $key | upper }}
               value: {{ $val | quote }}
         {{- end }}
